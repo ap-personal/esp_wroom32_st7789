@@ -720,20 +720,15 @@ esp_err_t st7789_init(void) {
     // Configure RST pin
     io_conf.pin_bit_mask = (1ULL << ST7789_RST_PIN);
     gpio_config(&io_conf);
-    
-    // Configure backlight pin
-    io_conf.pin_bit_mask = (1ULL << ST7789_BLK_PIN);
-    gpio_config(&io_conf);
 
     // Set initial pin states
     digitalWrite(ST7789_SCK_PIN, 1);  // SPI Mode 0: CLK idle high
     digitalWrite(ST7789_SDA_PIN, 0);  // MOSI idle low
     digitalWrite(ST7789_DC_PIN, 1);   // Data mode default
-    digitalWrite(ST7789_BLK_PIN, 1);  // Turn on backlight
     
     ESP_LOGI(TAG, "GPIO pins configured for bit-banging SPI");
-    ESP_LOGI(TAG, "Pin configuration: RST=%d, DC=%d, SDA=%d, SCK=%d, BLK=%d", 
-             ST7789_RST_PIN, ST7789_DC_PIN, ST7789_SDA_PIN, ST7789_SCK_PIN, ST7789_BLK_PIN);
+    ESP_LOGI(TAG, "Pin configuration: RST=%d, DC=%d, SDA=%d, SCK=%d",
+             ST7789_RST_PIN, ST7789_DC_PIN, ST7789_SDA_PIN, ST7789_SCK_PIN);
     
     // Perform hardware reset sequence for reliable initialization
     ESP_LOGI(TAG, "Performing hardware reset sequence...");
