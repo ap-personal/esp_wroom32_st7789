@@ -191,6 +191,11 @@ esp_err_t st7789_init(void) {
     write_command(ST7789_DISPON);   // Turn display on
     delay_ms(100);                  // Allow display to stabilize
     
+    // Clear display memory to prevent showing previous content
+    ESP_LOGI(TAG, "Clearing display memory...");
+    fill_rect(0, 0, 240, 240, BLACK);
+    delay_ms(50);                   // Allow clear operation to complete
+    
     ESP_LOGI(TAG, "ST7789 display initialization completed successfully!");
     ESP_LOGI(TAG, "===========================================");
     
