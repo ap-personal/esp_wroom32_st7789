@@ -252,7 +252,23 @@ static const uint16_t large_font16x16[][16] = {
      0x01C0, 0x0380, 0x0700, 0x0E3E, 0x1C7E, 0x387B, 0x707B, 0xE03E},
 };
 
-// Get large font character index for supported characters
+/**
+ * @brief Get array index for large font character
+ * 
+ * Maps supported characters to their corresponding index in the large_font16x16 array.
+ * Returns -1 for unsupported characters to enable graceful error handling.
+ * 
+ * Supported character mapping:
+ * - Space: index 0
+ * - Numbers 0-9: indices 1-10  
+ * - Colon (:): index 11
+ * - Letters A,C,D,E,H,I,M,N,P,R,S,T,U,Y: indices 12-25
+ * - Period (.): index 26
+ * - Percent (%): index 27
+ * 
+ * @param c Character to look up
+ * @return Array index (0-27) for supported characters, -1 for unsupported
+ */
 static int get_large_font_index(char c) {
     if (c == ' ') return 0;           // Space
     if (c >= '0' && c <= '9') return 1 + (c - '0');  // Numbers 0-9
@@ -276,17 +292,40 @@ static int get_large_font_index(char c) {
     return -1; // Unsupported character
 }
 
-// Precise millisecond delay using FreeRTOS task delay
+/**
+ * @brief Precise millisecond delay using FreeRTOS
+ * 
+ * Provides accurate timing delays required for ST7789 initialization and
+ * operation. Uses FreeRTOS task delay to avoid blocking other system tasks.
+ * 
+ * @param ms Delay duration in milliseconds
+ */
 static void delay_ms(uint32_t ms) {
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-// GPIO helper function
+/**
+ * @brief Set GPIO pin output level
+ * 
+ * Helper function for cleaner GPIO control. Provides Arduino-style
+ * digitalWrite interface for better code readability.
+ * 
+ * @param pin GPIO pin number
+ * @param value Output level (0 = low, 1 = high)
+ */
 static void digitalWrite(int pin, int value) {
     gpio_set_level((gpio_num_t)pin, value);
 }
 
-// Bit-banging SPI functions optimized for maximum speed
+/**
+ * @brief Send single byte via bit-banging SPI
+ * 
+ * Implements software SPI transmission for maximum compatibility with ST7789
+ * displays that don't have CS pins. Optimized for speed with no delays between
+ * clock cycles. Uses SPI Mode 0 (CPOL=0, CPHA=0).
+ * 
+ * @param data 8-bit data byte to transmit (MSB first)
+ */
 static void spi_write_byte_bitbang(uint8_t data) {
     for (int i = 7; i >= 0; i--) {
         // Set data bit on MOSI
@@ -312,7 +351,15 @@ static inline void set_dc_data(void) {
     gpio_set_level(ST7789_DC_PIN, 1);  // DC high = data mode
 }
 
-// ST7789 command and data transmission functions
+/**
+ * @brief Send command to ST7789 controller
+ * 
+ * Transmits a command byte to the ST7789 with proper DC pin control.
+ * Sets DC low for command mode, sends the command, then switches back
+ * to data mode for subsequent data transmission.
+ * 
+ * @param cmd ST7789 command byte
+ */
 static void write_command(uint8_t cmd) {
     ESP_LOGD(TAG, "Sending command: 0x%02X", cmd);
     set_dc_command();
@@ -332,7 +379,18 @@ static void write_data_word(uint16_t data) {
     spi_write_word_bitbang(data);
 }
 
-// Set display memory address window for pixel writing
+/**
+ * @brief Set display memory address window
+ * 
+ * Configures the ST7789 to accept pixel data for a specific rectangular region.
+ * Essential for efficient drawing operations as it allows streaming pixel data
+ * without individual coordinate commands.
+ * 
+ * @param x Starting X coordinate
+ * @param y Starting Y coordinate  
+ * @param w Width of the window in pixels
+ * @param h Height of the window in pixels
+ */
 static void set_address_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
     uint16_t x_end = x + w - 1;
     uint16_t y_end = y + h - 1;
@@ -510,34 +568,130 @@ static void draw_large_string(uint16_t x, uint16_t y, const char* str, uint16_t 
 
 // Public API functions for external use
 
+/**
+ * @brief Draw a single pixel at specified coordinates
+ * 
+ * Sets a single pixel on the display to the specified color. Includes bounds
+ * checking to prevent drawing outside the 240x240 display area.
+ * 
+ * @param x X coordinate (0-239)
+ * @param y Y coordinate (0-239)
+ * @param color 16-bit RGB565 color value
+ */
 void st7789_draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
     draw_pixel(x, y, color);
 }
 
+/**
+ * @brief Fill a rectangular area with specified color
+ * 
+ * Efficiently fills a rectangular region with a solid color using optimized
+ * SPI streaming. Includes cooperative multitasking yields for large rectangles.
+ * 
+ * @param x X coordinate of top-left corner
+ * @param y Y coordinate of top-left corner
+ * @param w Width of rectangle in pixels
+ * @param h Height of rectangle in pixels
+ * @param color 16-bit RGB565 color value
+ */
 void st7789_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
     fill_rect(x, y, w, h, color);
 }
 
+/**
+ * @brief Draw a single character using 8x8 font
+ * 
+ * Renders a single ASCII character (32-126) using the built-in 8x8 pixel font.
+ * Optimized for speed with minimal SPI overhead by setting the address window once.
+ * 
+ * @param x X coordinate for character placement
+ * @param y Y coordinate for character placement
+ * @param c Character to draw (printable ASCII 32-126)
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
 void st7789_draw_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color) {
     draw_char(x, y, c, color, bg_color);
 }
 
+/**
+ * @brief Draw a text string using 8x8 font
+ * 
+ * Renders a null-terminated string with automatic word wrapping and newline support.
+ * Includes cooperative multitasking yields for long strings to prevent watchdog timeouts.
+ * 
+ * @param x X coordinate for text start position
+ * @param y Y coordinate for text start position
+ * @param str Null-terminated string to draw
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
 void st7789_draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg_color) {
     draw_string(x, y, str, color, bg_color);
 }
 
+/**
+ * @brief Clear entire 240x240 display with specified color
+ * 
+ * Efficiently fills the entire display memory with a single color.
+ * Equivalent to fill_rect(0, 0, 240, 240, color) but more explicit.
+ * 
+ * @param color 16-bit RGB565 color value to fill the screen
+ */
 void st7789_clear_screen(uint16_t color) {
     fill_rect(0, 0, 240, 240, color);
 }
 
+/**
+ * @brief Draw a single character using 16x16 large font
+ * 
+ * Renders a character using the large 16x16 pixel font. Supports a limited
+ * character set optimized for sensor displays: numbers, symbols, and select letters.
+ * Includes periodic task yields during rendering to maintain system responsiveness.
+ * 
+ * @param x X coordinate for character placement
+ * @param y Y coordinate for character placement
+ * @param c Character to draw (supported: 0-9, ., %, :, A,C,D,E,H,I,M,N,P,R,S,T,U,Y)
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
 void st7789_draw_large_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color) {
     draw_large_char(x, y, c, color, bg_color);
 }
 
+/**
+ * @brief Draw a text string using 16x16 large font
+ * 
+ * Renders a string with large, easily readable characters. Perfect for sensor
+ * readings and important information. Includes automatic wrapping and newline support.
+ * Uses cooperative multitasking to prevent watchdog timeouts during rendering.
+ * 
+ * @param x X coordinate for text start position
+ * @param y Y coordinate for text start position
+ * @param str Null-terminated string (supported chars: 0-9, ., %, :, A,C,D,E,H,I,M,N,P,R,S,T,U,Y)
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
 void st7789_draw_large_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg_color) {
     draw_large_string(x, y, str, color, bg_color);
 }
 
+/**
+ * @brief Initialize the ST7789 240x240 TFT display
+ * 
+ * Performs complete initialization sequence including GPIO configuration,
+ * hardware reset, and ST7789 controller setup. Uses bit-banging SPI for
+ * maximum compatibility with displays that don't have CS pins.
+ * 
+ * Initialization sequence:
+ * 1. Configure GPIO pins for SPI and control signals
+ * 2. Perform hardware reset cycle
+ * 3. Send ST7789 initialization commands
+ * 4. Configure display for RGB565 color mode
+ * 5. Clear display memory
+ * 
+ * @return ESP_OK on successful initialization, ESP_FAIL on error
+ */
 esp_err_t st7789_init(void) {
     ESP_LOGI(TAG, "===========================================");
     ESP_LOGI(TAG, "     ST7789 Display Driver Initialization");
@@ -625,6 +779,19 @@ esp_err_t st7789_init(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Run comprehensive display functionality test
+ * 
+ * Executes a complete test sequence to verify display operation and color accuracy.
+ * Tests include solid color fills, multi-color patterns, and text rendering with
+ * the 8x8 font. Useful for validating display connections and driver functionality.
+ * 
+ * Test sequence:
+ * 1. Full-screen color fills (Red, Green, Blue, White, Black)
+ * 2. Multi-color pattern with positioned squares
+ * 3. Text rendering demonstration with various colors
+ * 4. Special characters and multiline text display
+ */
 void st7789_test(void) {
     ESP_LOGI(TAG, "Starting display functionality test...");
     
@@ -695,6 +862,19 @@ void st7789_test(void) {
     ESP_LOGI(TAG, "All color patterns and text should be visible on the display");
 }
 
+/**
+ * @brief Test large font functionality with sensor-style display
+ * 
+ * Demonstrates the 16x16 large font capabilities by showing sample sensor
+ * readings in a typical IoT monitoring format. Tests character rendering,
+ * color coding, and layout positioning for temperature, humidity, and distance.
+ * 
+ * Test sequence:
+ * 1. Initial sensor reading display (TEMP, HUMIDITY, DISTANCE)
+ * 2. Updated values to show dynamic content capability
+ * 3. Validates all supported large font characters including numbers,
+ *    symbols (., %, :), and uppercase letters
+ */
 void st7789_large_font_test(void) {
     ESP_LOGI(TAG, "Starting large font test...");
     
