@@ -15,8 +15,7 @@
 #define ST7789_SCK_PIN  18  // SPI clock pin
 #define ST7789_SDA_PIN  23  // SPI data pin (MOSI)
 #define ST7789_RST_PIN  4   // Hardware reset pin (active low)
-#define ST7789_DC_PIN   2   // Data/Command select pin
-#define ST7789_BLK_PIN  15  // Backlight control pin
+#define ST7789_DC_PIN   2   // Data/Command select pin 
 
 /**
  * @brief Initialize the ST7789 display driver
