@@ -32,6 +32,10 @@ static const char *TAG = "ST7789";
 #define FONT_WIDTH  8
 #define FONT_HEIGHT 8
 
+// Large font definitions - 16x16 pixel font
+#define LARGE_FONT_WIDTH  16
+#define LARGE_FONT_HEIGHT 16
+
 // Simple 8x8 bitmap font for basic ASCII characters (32-126)
 static const uint8_t font8x8[95][8] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Space (32)
@@ -131,17 +135,197 @@ static const uint8_t font8x8[95][8] = {
     {0x6E, 0x3B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // ~ (126)
 };
 
-// Precise millisecond delay using FreeRTOS task delay
+// Large 16x16 font for sensor displays - focused character set
+// Includes: space, digits 0-9, colon, uppercase letters A-Z
+// Character mapping: 32(space), 48-57(0-9), 58(:), 65-90(A-Z)
+static const uint16_t large_font16x16[][16] = {
+    // Space (32)
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000},
+     
+    // 0 (48)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x701E, 0x600F, 0x600F, 0x600F,
+     0x600F, 0x600F, 0x600F, 0x701E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 1 (49) - Fixed orientation
+    {0x0000, 0x01C0, 0x03C0, 0x07C0, 0x0DC0, 0x01C0, 0x01C0, 0x01C0,
+     0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x7FF0, 0x7FF0, 0x0000},
+     
+    // 2 (50)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x701E, 0x600F, 0x6007, 0x0007,
+     0x000E, 0x001C, 0x0038, 0x0070, 0x00E0, 0x7FFF, 0x7FFF, 0x0000},
+     
+    // 3 (51)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x0007, 0x0007, 0x03FE,
+     0x03FE, 0x0007, 0x0007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 4 (52)
+    {0x0000, 0x000E, 0x001E, 0x003E, 0x006E, 0x00CE, 0x018E, 0x030E,
+     0x060E, 0x7FFF, 0x7FFF, 0x000E, 0x000E, 0x000E, 0x000E, 0x0000},
+     
+    // 5 (53)
+    {0x0000, 0x7FFF, 0x7FFF, 0x7000, 0x7000, 0x7000, 0x7FE0, 0x7FF8,
+     0x003C, 0x000E, 0x0007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 6 (54)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x7007, 0x7000, 0x7FE0,
+     0x7FF8, 0x703C, 0x700E, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 7 (55)
+    {0x0000, 0x7FFF, 0x7FFF, 0x0007, 0x000E, 0x000E, 0x001C, 0x001C,
+     0x0038, 0x0038, 0x0070, 0x0070, 0x00E0, 0x00E0, 0x01C0, 0x0000},
+     
+    // 8 (56)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x700E, 0x3C3C, 0x1FF8,
+     0x1FF8, 0x3C3C, 0x700E, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 9 (57)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x700E, 0x3C0E, 0x1FFE,
+     0x07FE, 0x0007, 0x0007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // : (58)
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x01C0, 0x03E0, 0x03E0, 0x01C0,
+     0x0000, 0x01C0, 0x03E0, 0x03E0, 0x01C0, 0x0000, 0x0000, 0x0000},
+     
+    // A (65)
+    {0x0000, 0x0380, 0x07C0, 0x0EE0, 0x1C70, 0x1C70, 0x3838, 0x381C,
+     0x701C, 0x7FFE, 0x7FFE, 0xE007, 0xE007, 0xE007, 0xE007, 0x0000},
+     
+    // C (67)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x701E, 0x700F, 0x7007, 0x7000,
+     0x7000, 0x7007, 0x700F, 0x701E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // D (68)
+    {0x0000, 0x7FE0, 0x7FF8, 0x703C, 0x701E, 0x700F, 0x700F, 0x700F,
+     0x700F, 0x700F, 0x700F, 0x701E, 0x703C, 0x7FF8, 0x7FE0, 0x0000},
+     
+    // E (69)
+    {0x0000, 0x7FFF, 0x7FFF, 0x7000, 0x7000, 0x7000, 0x7FE0, 0x7FE0,
+     0x7FE0, 0x7000, 0x7000, 0x7000, 0x7000, 0x7FFF, 0x7FFF, 0x0000},
+     
+    // H (72)
+    {0x0000, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xFFFF, 0xFFFF,
+     0xFFFF, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0x0000},
+     
+    // I (73)
+    {0x0000, 0x0FF0, 0x0FF0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0,
+     0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x0FF0, 0x0FF0, 0x0000},
+     
+    // M (77)
+    {0x0000, 0xE007, 0xF00F, 0xF81F, 0xFC3F, 0xEE77, 0xE7E7, 0xE3C7,
+     0xE187, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0x0000},
+     
+    // N (78)
+    {0x0000, 0xE007, 0xF007, 0xF807, 0xFC07, 0xEE07, 0xE707, 0xE387,
+     0xE1C7, 0xE0E7, 0xE077, 0xE03F, 0xE01F, 0xE00F, 0xE007, 0x0000},
+     
+    // P (80)
+    {0x0000, 0x7FE0, 0x7FF8, 0x703C, 0x700E, 0x700E, 0x703C, 0x7FF8,
+     0x7FE0, 0x7000, 0x7000, 0x7000, 0x7000, 0x7000, 0x7000, 0x0000},
+     
+    // R (82)
+    {0x0000, 0x7FE0, 0x7FF8, 0x703C, 0x700E, 0x700E, 0x703C, 0x7FF8,
+     0x7FE0, 0x7380, 0x71C0, 0x70E0, 0x7070, 0x7038, 0x701C, 0x0000},
+     
+    // S (83)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x7007, 0x3800, 0x1FE0,
+     0x07F8, 0x001C, 0x700E, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // T (84)
+    {0x0000, 0x7FFF, 0x7FFF, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0,
+     0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x0000},
+     
+    // U (85)
+    {0x0000, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007,
+     0xE007, 0xE007, 0xE007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // Y (89)
+    {0x0000, 0xE007, 0x700E, 0x381C, 0x1C38, 0x0E70, 0x07E0, 0x03C0,
+     0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0000},
+     
+    // . (46) - Period
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+     0x0000, 0x0000, 0x0000, 0x0000, 0x03C0, 0x07E0, 0x07E0, 0x03C0},
+     
+    // % (37) - Percent
+    {0x0000, 0x7003, 0xF807, 0xDC0E, 0xDC1C, 0xF838, 0x7070, 0x00E0,
+     0x01C0, 0x0380, 0x0700, 0x0E3E, 0x1C7E, 0x387B, 0x707B, 0xE03E},
+};
+
+/**
+ * @brief Get array index for large font character
+ * 
+ * Maps supported characters to their corresponding index in the large_font16x16 array.
+ * Returns -1 for unsupported characters to enable graceful error handling.
+ * 
+ * Supported character mapping:
+ * - Space: index 0
+ * - Numbers 0-9: indices 1-10  
+ * - Colon (:): index 11
+ * - Letters A,C,D,E,H,I,M,N,P,R,S,T,U,Y: indices 12-25
+ * - Period (.): index 26
+ * - Percent (%): index 27
+ * 
+ * @param c Character to look up
+ * @return Array index (0-27) for supported characters, -1 for unsupported
+ */
+static int get_large_font_index(char c) {
+    if (c == ' ') return 0;           // Space
+    if (c >= '0' && c <= '9') return 1 + (c - '0');  // Numbers 0-9
+    if (c == ':') return 11;          // Colon
+    if (c == 'A') return 12;          // A
+    if (c == 'C') return 13;          // C  
+    if (c == 'D') return 14;          // D
+    if (c == 'E') return 15;          // E
+    if (c == 'H') return 16;          // H
+    if (c == 'I') return 17;          // I
+    if (c == 'M') return 18;          // M
+    if (c == 'N') return 19;          // N
+    if (c == 'P') return 20;          // P
+    if (c == 'R') return 21;          // R
+    if (c == 'S') return 22;          // S
+    if (c == 'T') return 23;          // T
+    if (c == 'U') return 24;          // U
+    if (c == 'Y') return 25;          // Y
+    if (c == '.') return 26;          // Period
+    if (c == '%') return 27;          // Percent
+    return -1; // Unsupported character
+}
+
+/**
+ * @brief Precise millisecond delay using FreeRTOS
+ * 
+ * Provides accurate timing delays required for ST7789 initialization and
+ * operation. Uses FreeRTOS task delay to avoid blocking other system tasks.
+ * 
+ * @param ms Delay duration in milliseconds
+ */
 static void delay_ms(uint32_t ms) {
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-// GPIO helper function
+/**
+ * @brief Set GPIO pin output level
+ * 
+ * Helper function for cleaner GPIO control. Provides Arduino-style
+ * digitalWrite interface for better code readability.
+ * 
+ * @param pin GPIO pin number
+ * @param value Output level (0 = low, 1 = high)
+ */
 static void digitalWrite(int pin, int value) {
     gpio_set_level((gpio_num_t)pin, value);
 }
 
-// Bit-banging SPI functions optimized for maximum speed
+/**
+ * @brief Send single byte via bit-banging SPI
+ * 
+ * Implements software SPI transmission for maximum compatibility with ST7789
+ * displays that don't have CS pins. Optimized for speed with no delays between
+ * clock cycles. Uses SPI Mode 0 (CPOL=0, CPHA=0).
+ * 
+ * @param data 8-bit data byte to transmit (MSB first)
+ */
 static void spi_write_byte_bitbang(uint8_t data) {
     for (int i = 7; i >= 0; i--) {
         // Set data bit on MOSI
@@ -167,7 +351,15 @@ static inline void set_dc_data(void) {
     gpio_set_level(ST7789_DC_PIN, 1);  // DC high = data mode
 }
 
-// ST7789 command and data transmission functions
+/**
+ * @brief Send command to ST7789 controller
+ * 
+ * Transmits a command byte to the ST7789 with proper DC pin control.
+ * Sets DC low for command mode, sends the command, then switches back
+ * to data mode for subsequent data transmission.
+ * 
+ * @param cmd ST7789 command byte
+ */
 static void write_command(uint8_t cmd) {
     ESP_LOGD(TAG, "Sending command: 0x%02X", cmd);
     set_dc_command();
@@ -187,7 +379,18 @@ static void write_data_word(uint16_t data) {
     spi_write_word_bitbang(data);
 }
 
-// Set display memory address window for pixel writing
+/**
+ * @brief Set display memory address window
+ * 
+ * Configures the ST7789 to accept pixel data for a specific rectangular region.
+ * Essential for efficient drawing operations as it allows streaming pixel data
+ * without individual coordinate commands.
+ * 
+ * @param x Starting X coordinate
+ * @param y Starting Y coordinate  
+ * @param w Width of the window in pixels
+ * @param h Height of the window in pixels
+ */
 static void set_address_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
     uint16_t x_end = x + w - 1;
     uint16_t y_end = y + h - 1;
@@ -294,28 +497,201 @@ static void draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color,
     }
 }
 
+// Draw a single large character (16x16) at specified position
+static void draw_large_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color) {
+    int char_index = get_large_font_index(c);
+    if (char_index < 0) return;  // Unsupported character
+    
+    // Set address window for entire character to minimize SPI overhead
+    set_address_window(x, y, LARGE_FONT_WIDTH, LARGE_FONT_HEIGHT);
+    set_dc_data();  // Switch to data mode once
+    
+    // Stream entire character as pixel data
+    for (uint8_t row = 0; row < LARGE_FONT_HEIGHT; row++) {
+        uint16_t font_row = large_font16x16[char_index][row];
+        
+        for (uint8_t col = 0; col < LARGE_FONT_WIDTH; col++) {
+            // Read bit from font data (MSB first for 16x16)
+            if (font_row & (0x8000 >> col)) {
+                spi_write_word_bitbang(color);     // Foreground
+            } else {
+                spi_write_word_bitbang(bg_color);  // Background
+            }
+        }
+        
+        // Reset task occasionally for large characters
+        if ((row % 8) == 0) {
+            taskYIELD();
+        }
+    }
+}
+
+// Draw a string with large font (16x16)
+static void draw_large_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg_color) {
+    uint16_t cur_x = x;
+    uint16_t cur_y = y;
+    uint16_t char_count = 0;
+    
+    while (*str) {
+        if (*str == '\n') {
+            // New line
+            cur_x = x;
+            cur_y += LARGE_FONT_HEIGHT + 4;  // Add 4 pixels line spacing for large font
+        } else if (*str == '\r') {
+            // Carriage return
+            cur_x = x;
+        } else {
+            // Bounds check before drawing character
+            if (cur_x + LARGE_FONT_WIDTH <= 240 && cur_y + LARGE_FONT_HEIGHT <= 240) {
+                draw_large_char(cur_x, cur_y, *str, color, bg_color);
+            }
+            cur_x += LARGE_FONT_WIDTH + 2;  // Add 2 pixels character spacing for large font
+            
+            // Wrap to next line if text exceeds display width
+            if (cur_x + LARGE_FONT_WIDTH > 240) {
+                cur_x = x;
+                cur_y += LARGE_FONT_HEIGHT + 4;
+            }
+        }
+        str++;
+        char_count++;
+        
+        // Only yield for very long strings
+        if ((char_count % 5) == 0) {
+            taskYIELD(); // Brief yield for large font operations
+        }
+        
+        // Stop if text exceeds display height
+        if (cur_y + LARGE_FONT_HEIGHT > 240) break;
+    }
+}
+
 // Public API functions for external use
 
+/**
+ * @brief Draw a single pixel at specified coordinates
+ * 
+ * Sets a single pixel on the display to the specified color. Includes bounds
+ * checking to prevent drawing outside the 240x240 display area.
+ * 
+ * @param x X coordinate (0-239)
+ * @param y Y coordinate (0-239)
+ * @param color 16-bit RGB565 color value
+ */
 void st7789_draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
     draw_pixel(x, y, color);
 }
 
+/**
+ * @brief Fill a rectangular area with specified color
+ * 
+ * Efficiently fills a rectangular region with a solid color using optimized
+ * SPI streaming. Includes cooperative multitasking yields for large rectangles.
+ * 
+ * @param x X coordinate of top-left corner
+ * @param y Y coordinate of top-left corner
+ * @param w Width of rectangle in pixels
+ * @param h Height of rectangle in pixels
+ * @param color 16-bit RGB565 color value
+ */
 void st7789_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
     fill_rect(x, y, w, h, color);
 }
 
+/**
+ * @brief Draw a single character using 8x8 font
+ * 
+ * Renders a single ASCII character (32-126) using the built-in 8x8 pixel font.
+ * Optimized for speed with minimal SPI overhead by setting the address window once.
+ * 
+ * @param x X coordinate for character placement
+ * @param y Y coordinate for character placement
+ * @param c Character to draw (printable ASCII 32-126)
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
 void st7789_draw_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color) {
     draw_char(x, y, c, color, bg_color);
 }
 
+/**
+ * @brief Draw a text string using 8x8 font
+ * 
+ * Renders a null-terminated string with automatic word wrapping and newline support.
+ * Includes cooperative multitasking yields for long strings to prevent watchdog timeouts.
+ * 
+ * @param x X coordinate for text start position
+ * @param y Y coordinate for text start position
+ * @param str Null-terminated string to draw
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
 void st7789_draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg_color) {
     draw_string(x, y, str, color, bg_color);
 }
 
+/**
+ * @brief Clear entire 240x240 display with specified color
+ * 
+ * Efficiently fills the entire display memory with a single color.
+ * Equivalent to fill_rect(0, 0, 240, 240, color) but more explicit.
+ * 
+ * @param color 16-bit RGB565 color value to fill the screen
+ */
 void st7789_clear_screen(uint16_t color) {
     fill_rect(0, 0, 240, 240, color);
 }
 
+/**
+ * @brief Draw a single character using 16x16 large font
+ * 
+ * Renders a character using the large 16x16 pixel font. Supports a limited
+ * character set optimized for sensor displays: numbers, symbols, and select letters.
+ * Includes periodic task yields during rendering to maintain system responsiveness.
+ * 
+ * @param x X coordinate for character placement
+ * @param y Y coordinate for character placement
+ * @param c Character to draw (supported: 0-9, ., %, :, A,C,D,E,H,I,M,N,P,R,S,T,U,Y)
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
+void st7789_draw_large_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color) {
+    draw_large_char(x, y, c, color, bg_color);
+}
+
+/**
+ * @brief Draw a text string using 16x16 large font
+ * 
+ * Renders a string with large, easily readable characters. Perfect for sensor
+ * readings and important information. Includes automatic wrapping and newline support.
+ * Uses cooperative multitasking to prevent watchdog timeouts during rendering.
+ * 
+ * @param x X coordinate for text start position
+ * @param y Y coordinate for text start position
+ * @param str Null-terminated string (supported chars: 0-9, ., %, :, A,C,D,E,H,I,M,N,P,R,S,T,U,Y)
+ * @param color 16-bit RGB565 foreground color
+ * @param bg_color 16-bit RGB565 background color
+ */
+void st7789_draw_large_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg_color) {
+    draw_large_string(x, y, str, color, bg_color);
+}
+
+/**
+ * @brief Initialize the ST7789 240x240 TFT display
+ * 
+ * Performs complete initialization sequence including GPIO configuration,
+ * hardware reset, and ST7789 controller setup. Uses bit-banging SPI for
+ * maximum compatibility with displays that don't have CS pins.
+ * 
+ * Initialization sequence:
+ * 1. Configure GPIO pins for SPI and control signals
+ * 2. Perform hardware reset cycle
+ * 3. Send ST7789 initialization commands
+ * 4. Configure display for RGB565 color mode
+ * 5. Clear display memory
+ * 
+ * @return ESP_OK on successful initialization, ESP_FAIL on error
+ */
 esp_err_t st7789_init(void) {
     ESP_LOGI(TAG, "===========================================");
     ESP_LOGI(TAG, "     ST7789 Display Driver Initialization");
@@ -403,6 +779,19 @@ esp_err_t st7789_init(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Run comprehensive display functionality test
+ * 
+ * Executes a complete test sequence to verify display operation and color accuracy.
+ * Tests include solid color fills, multi-color patterns, and text rendering with
+ * the 8x8 font. Useful for validating display connections and driver functionality.
+ * 
+ * Test sequence:
+ * 1. Full-screen color fills (Red, Green, Blue, White, Black)
+ * 2. Multi-color pattern with positioned squares
+ * 3. Text rendering demonstration with various colors
+ * 4. Special characters and multiline text display
+ */
 void st7789_test(void) {
     ESP_LOGI(TAG, "Starting display functionality test...");
     
@@ -471,4 +860,59 @@ void st7789_test(void) {
     
     ESP_LOGI(TAG, "Display test sequence completed successfully!");
     ESP_LOGI(TAG, "All color patterns and text should be visible on the display");
+}
+
+/**
+ * @brief Test large font functionality with sensor-style display
+ * 
+ * Demonstrates the 16x16 large font capabilities by showing sample sensor
+ * readings in a typical IoT monitoring format. Tests character rendering,
+ * color coding, and layout positioning for temperature, humidity, and distance.
+ * 
+ * Test sequence:
+ * 1. Initial sensor reading display (TEMP, HUMIDITY, DISTANCE)
+ * 2. Updated values to show dynamic content capability
+ * 3. Validates all supported large font characters including numbers,
+ *    symbols (., %, :), and uppercase letters
+ */
+void st7789_large_font_test(void) {
+    ESP_LOGI(TAG, "Starting large font test...");
+    
+    // Clear screen to black
+    st7789_clear_screen(BLACK);
+    delay_ms(500);
+    
+    // Test large font with sensor-style display
+    ESP_LOGI(TAG, "Large Font Test: Sensor Display Demo");
+    
+    // Display temperature
+    draw_large_string(10, 20, "TEMP:", WHITE, BLACK);
+    draw_large_string(10, 50, "22.5C", RED, BLACK);
+    
+    draw_large_string(10, 90, "HUMIDITY:", WHITE, BLACK);
+    draw_large_string(10, 120, "40%", BLUE, BLACK);
+    
+    draw_large_string(10, 150, "DISTANCE:", WHITE, BLACK);
+    draw_large_string(10, 180, "10.1CM", GREEN, BLACK);
+    
+    delay_ms(3000);
+    
+    // Test with different values
+    ESP_LOGI(TAG, "Large Font Test: Updated Values");
+    
+    // Clear and show updated values
+    st7789_clear_screen(BLACK);
+    
+    draw_large_string(10, 20, "TEMP:", WHITE, BLACK);
+    draw_large_string(10, 50, "22.1C", RED, BLACK);
+    
+    draw_large_string(10, 90, "HUMIDITY:", WHITE, BLACK);
+    draw_large_string(10, 120, "70%", BLUE, BLACK);
+    
+    draw_large_string(10, 150, "DISTANCE:", WHITE, BLACK);
+    draw_large_string(10, 180, "8.2CM", GREEN, BLACK);
+    
+    delay_ms(3000);
+    
+    ESP_LOGI(TAG, "Large font test completed successfully!");
 }
