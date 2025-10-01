@@ -32,6 +32,10 @@ static const char *TAG = "ST7789";
 #define FONT_WIDTH  8
 #define FONT_HEIGHT 8
 
+// Large font definitions - 16x16 pixel font
+#define LARGE_FONT_WIDTH  16
+#define LARGE_FONT_HEIGHT 16
+
 // Simple 8x8 bitmap font for basic ASCII characters (32-126)
 static const uint8_t font8x8[95][8] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Space (32)
@@ -130,6 +134,147 @@ static const uint8_t font8x8[95][8] = {
     {0x07, 0x0C, 0x0C, 0x38, 0x0C, 0x0C, 0x07, 0x00}, // } (125)
     {0x6E, 0x3B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // ~ (126)
 };
+
+// Large 16x16 font for sensor displays - focused character set
+// Includes: space, digits 0-9, colon, uppercase letters A-Z
+// Character mapping: 32(space), 48-57(0-9), 58(:), 65-90(A-Z)
+static const uint16_t large_font16x16[][16] = {
+    // Space (32)
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000},
+     
+    // 0 (48)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x701E, 0x600F, 0x600F, 0x600F,
+     0x600F, 0x600F, 0x600F, 0x701E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 1 (49) - Fixed orientation
+    {0x0000, 0x01C0, 0x03C0, 0x07C0, 0x0DC0, 0x01C0, 0x01C0, 0x01C0,
+     0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x7FF0, 0x7FF0, 0x0000},
+     
+    // 2 (50)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x701E, 0x600F, 0x6007, 0x0007,
+     0x000E, 0x001C, 0x0038, 0x0070, 0x00E0, 0x7FFF, 0x7FFF, 0x0000},
+     
+    // 3 (51)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x0007, 0x0007, 0x03FE,
+     0x03FE, 0x0007, 0x0007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 4 (52)
+    {0x0000, 0x000E, 0x001E, 0x003E, 0x006E, 0x00CE, 0x018E, 0x030E,
+     0x060E, 0x7FFF, 0x7FFF, 0x000E, 0x000E, 0x000E, 0x000E, 0x0000},
+     
+    // 5 (53)
+    {0x0000, 0x7FFF, 0x7FFF, 0x7000, 0x7000, 0x7000, 0x7FE0, 0x7FF8,
+     0x003C, 0x000E, 0x0007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 6 (54)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x7007, 0x7000, 0x7FE0,
+     0x7FF8, 0x703C, 0x700E, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 7 (55)
+    {0x0000, 0x7FFF, 0x7FFF, 0x0007, 0x000E, 0x000E, 0x001C, 0x001C,
+     0x0038, 0x0038, 0x0070, 0x0070, 0x00E0, 0x00E0, 0x01C0, 0x0000},
+     
+    // 8 (56)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x700E, 0x3C3C, 0x1FF8,
+     0x1FF8, 0x3C3C, 0x700E, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // 9 (57)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x700E, 0x3C0E, 0x1FFE,
+     0x07FE, 0x0007, 0x0007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // : (58)
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x01C0, 0x03E0, 0x03E0, 0x01C0,
+     0x0000, 0x01C0, 0x03E0, 0x03E0, 0x01C0, 0x0000, 0x0000, 0x0000},
+     
+    // A (65)
+    {0x0000, 0x0380, 0x07C0, 0x0EE0, 0x1C70, 0x1C70, 0x3838, 0x381C,
+     0x701C, 0x7FFE, 0x7FFE, 0xE007, 0xE007, 0xE007, 0xE007, 0x0000},
+     
+    // C (67)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x701E, 0x700F, 0x7007, 0x7000,
+     0x7000, 0x7007, 0x700F, 0x701E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // D (68)
+    {0x0000, 0x7FE0, 0x7FF8, 0x703C, 0x701E, 0x700F, 0x700F, 0x700F,
+     0x700F, 0x700F, 0x700F, 0x701E, 0x703C, 0x7FF8, 0x7FE0, 0x0000},
+     
+    // E (69)
+    {0x0000, 0x7FFF, 0x7FFF, 0x7000, 0x7000, 0x7000, 0x7FE0, 0x7FE0,
+     0x7FE0, 0x7000, 0x7000, 0x7000, 0x7000, 0x7FFF, 0x7FFF, 0x0000},
+     
+    // H (72)
+    {0x0000, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xFFFF, 0xFFFF,
+     0xFFFF, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0x0000},
+     
+    // I (73)
+    {0x0000, 0x0FF0, 0x0FF0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0,
+     0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x0FF0, 0x0FF0, 0x0000},
+     
+    // M (77)
+    {0x0000, 0xE007, 0xF00F, 0xF81F, 0xFC3F, 0xEE77, 0xE7E7, 0xE3C7,
+     0xE187, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0x0000},
+     
+    // N (78)
+    {0x0000, 0xE007, 0xF007, 0xF807, 0xFC07, 0xEE07, 0xE707, 0xE387,
+     0xE1C7, 0xE0E7, 0xE077, 0xE03F, 0xE01F, 0xE00F, 0xE007, 0x0000},
+     
+    // P (80)
+    {0x0000, 0x7FE0, 0x7FF8, 0x703C, 0x700E, 0x700E, 0x703C, 0x7FF8,
+     0x7FE0, 0x7000, 0x7000, 0x7000, 0x7000, 0x7000, 0x7000, 0x0000},
+     
+    // R (82)
+    {0x0000, 0x7FE0, 0x7FF8, 0x703C, 0x700E, 0x700E, 0x703C, 0x7FF8,
+     0x7FE0, 0x7380, 0x71C0, 0x70E0, 0x7070, 0x7038, 0x701C, 0x0000},
+     
+    // S (83)
+    {0x0000, 0x07E0, 0x1FF8, 0x3C3C, 0x700E, 0x7007, 0x3800, 0x1FE0,
+     0x07F8, 0x001C, 0x700E, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // T (84)
+    {0x0000, 0x7FFF, 0x7FFF, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0,
+     0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x01C0, 0x0000},
+     
+    // U (85)
+    {0x0000, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007, 0xE007,
+     0xE007, 0xE007, 0xE007, 0x700E, 0x3C3C, 0x1FF8, 0x07E0, 0x0000},
+     
+    // Y (89)
+    {0x0000, 0xE007, 0x700E, 0x381C, 0x1C38, 0x0E70, 0x07E0, 0x03C0,
+     0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0180, 0x0000},
+     
+    // . (46) - Period
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+     0x0000, 0x0000, 0x0000, 0x0000, 0x03C0, 0x07E0, 0x07E0, 0x03C0},
+     
+    // % (37) - Percent
+    {0x0000, 0x7003, 0xF807, 0xDC0E, 0xDC1C, 0xF838, 0x7070, 0x00E0,
+     0x01C0, 0x0380, 0x0700, 0x0E3E, 0x1C7E, 0x387B, 0x707B, 0xE03E},
+};
+
+// Get large font character index for supported characters
+static int get_large_font_index(char c) {
+    if (c == ' ') return 0;           // Space
+    if (c >= '0' && c <= '9') return 1 + (c - '0');  // Numbers 0-9
+    if (c == ':') return 11;          // Colon
+    if (c == 'A') return 12;          // A
+    if (c == 'C') return 13;          // C  
+    if (c == 'D') return 14;          // D
+    if (c == 'E') return 15;          // E
+    if (c == 'H') return 16;          // H
+    if (c == 'I') return 17;          // I
+    if (c == 'M') return 18;          // M
+    if (c == 'N') return 19;          // N
+    if (c == 'P') return 20;          // P
+    if (c == 'R') return 21;          // R
+    if (c == 'S') return 22;          // S
+    if (c == 'T') return 23;          // T
+    if (c == 'U') return 24;          // U
+    if (c == 'Y') return 25;          // Y
+    if (c == '.') return 26;          // Period
+    if (c == '%') return 27;          // Percent
+    return -1; // Unsupported character
+}
 
 // Precise millisecond delay using FreeRTOS task delay
 static void delay_ms(uint32_t ms) {
@@ -294,6 +439,75 @@ static void draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color,
     }
 }
 
+// Draw a single large character (16x16) at specified position
+static void draw_large_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color) {
+    int char_index = get_large_font_index(c);
+    if (char_index < 0) return;  // Unsupported character
+    
+    // Set address window for entire character to minimize SPI overhead
+    set_address_window(x, y, LARGE_FONT_WIDTH, LARGE_FONT_HEIGHT);
+    set_dc_data();  // Switch to data mode once
+    
+    // Stream entire character as pixel data
+    for (uint8_t row = 0; row < LARGE_FONT_HEIGHT; row++) {
+        uint16_t font_row = large_font16x16[char_index][row];
+        
+        for (uint8_t col = 0; col < LARGE_FONT_WIDTH; col++) {
+            // Read bit from font data (MSB first for 16x16)
+            if (font_row & (0x8000 >> col)) {
+                spi_write_word_bitbang(color);     // Foreground
+            } else {
+                spi_write_word_bitbang(bg_color);  // Background
+            }
+        }
+        
+        // Reset task occasionally for large characters
+        if ((row % 8) == 0) {
+            taskYIELD();
+        }
+    }
+}
+
+// Draw a string with large font (16x16)
+static void draw_large_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg_color) {
+    uint16_t cur_x = x;
+    uint16_t cur_y = y;
+    uint16_t char_count = 0;
+    
+    while (*str) {
+        if (*str == '\n') {
+            // New line
+            cur_x = x;
+            cur_y += LARGE_FONT_HEIGHT + 4;  // Add 4 pixels line spacing for large font
+        } else if (*str == '\r') {
+            // Carriage return
+            cur_x = x;
+        } else {
+            // Bounds check before drawing character
+            if (cur_x + LARGE_FONT_WIDTH <= 240 && cur_y + LARGE_FONT_HEIGHT <= 240) {
+                draw_large_char(cur_x, cur_y, *str, color, bg_color);
+            }
+            cur_x += LARGE_FONT_WIDTH + 2;  // Add 2 pixels character spacing for large font
+            
+            // Wrap to next line if text exceeds display width
+            if (cur_x + LARGE_FONT_WIDTH > 240) {
+                cur_x = x;
+                cur_y += LARGE_FONT_HEIGHT + 4;
+            }
+        }
+        str++;
+        char_count++;
+        
+        // Only yield for very long strings
+        if ((char_count % 5) == 0) {
+            taskYIELD(); // Brief yield for large font operations
+        }
+        
+        // Stop if text exceeds display height
+        if (cur_y + LARGE_FONT_HEIGHT > 240) break;
+    }
+}
+
 // Public API functions for external use
 
 void st7789_draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -314,6 +528,14 @@ void st7789_draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color,
 
 void st7789_clear_screen(uint16_t color) {
     fill_rect(0, 0, 240, 240, color);
+}
+
+void st7789_draw_large_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color) {
+    draw_large_char(x, y, c, color, bg_color);
+}
+
+void st7789_draw_large_string(uint16_t x, uint16_t y, const char* str, uint16_t color, uint16_t bg_color) {
+    draw_large_string(x, y, str, color, bg_color);
 }
 
 esp_err_t st7789_init(void) {
@@ -471,4 +693,46 @@ void st7789_test(void) {
     
     ESP_LOGI(TAG, "Display test sequence completed successfully!");
     ESP_LOGI(TAG, "All color patterns and text should be visible on the display");
+}
+
+void st7789_large_font_test(void) {
+    ESP_LOGI(TAG, "Starting large font test...");
+    
+    // Clear screen to black
+    st7789_clear_screen(BLACK);
+    delay_ms(500);
+    
+    // Test large font with sensor-style display
+    ESP_LOGI(TAG, "Large Font Test: Sensor Display Demo");
+    
+    // Display temperature
+    draw_large_string(10, 20, "TEMP:", WHITE, BLACK);
+    draw_large_string(10, 50, "22.5C", RED, BLACK);
+    
+    draw_large_string(10, 90, "HUMIDITY:", WHITE, BLACK);
+    draw_large_string(10, 120, "40%", BLUE, BLACK);
+    
+    draw_large_string(10, 150, "DISTANCE:", WHITE, BLACK);
+    draw_large_string(10, 180, "10.1CM", GREEN, BLACK);
+    
+    delay_ms(3000);
+    
+    // Test with different values
+    ESP_LOGI(TAG, "Large Font Test: Updated Values");
+    
+    // Clear and show updated values
+    st7789_clear_screen(BLACK);
+    
+    draw_large_string(10, 20, "TEMP:", WHITE, BLACK);
+    draw_large_string(10, 50, "22.1C", RED, BLACK);
+    
+    draw_large_string(10, 90, "HUMIDITY:", WHITE, BLACK);
+    draw_large_string(10, 120, "70%", BLUE, BLACK);
+    
+    draw_large_string(10, 150, "DISTANCE:", WHITE, BLACK);
+    draw_large_string(10, 180, "8.2CM", GREEN, BLACK);
+    
+    delay_ms(3000);
+    
+    ESP_LOGI(TAG, "Large font test completed successfully!");
 }

@@ -22,6 +22,10 @@ void app_main(void)
     
     /* Execute display functionality tests */
     ESP_LOGI(TAG, "Starting display test sequence...");
-    st7789_test();
-    ESP_LOGI(TAG, "   Display test sequence completed!");
+    
+    // Run large font test
+    ESP_LOGI(TAG, "Starting large font test...");
+    st7789_large_font_test();
+    
+    ESP_LOGI(TAG, "Display test sequence completed!");
 }
